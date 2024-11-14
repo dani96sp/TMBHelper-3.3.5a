@@ -1,4 +1,4 @@
-ThatsMyBis = LibStub("AceAddon-3.0"):NewAddon("ThatsMyBis", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0")
+ThatsMyBis = LibStub("AceAddon-3.0"):NewAddon("ThatsMyBis", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceHook-3.0")
 local LibAceSerializer = LibStub:GetLibrary("AceSerializer-3.0")
 local libc = LibStub:GetLibrary("LibCompress")
 
@@ -18,38 +18,38 @@ local classColorsTable = {
 	"\124cFF9482C9",
 	"\124cFF69CCF0",
 	"\124cFFC41E3A"
-	}
-	local classToID = {
-		Warrior = 1,
-		Paladin = 2,
-		Shaman = 3,
-		Hunter = 4,
-		Druid = 5,
-		Rogue = 6,
-		Priest = 7,
-		Warlock = 8,
-		Mage = 9,
-		["Death Knight"] = 10
-		}
+}
+local classToID = {
+	Warrior = 1,
+	Paladin = 2,
+	Shaman = 3,
+	Hunter = 4,
+	Druid = 5,
+	Rogue = 6,
+	Priest = 7,
+	Warlock = 8,
+	Mage = 9,
+	["Death Knight"] = 10
+}
 local rankColorsTable = {
 	S = "\124cFF02F3FF",
 	A = "\124cFF20FF00",
 	B = "\124cFFF7FF00",
-	C = "\124cFFFF8800", 
+	C = "\124cFFFF8800",
 	D = "\124cFFFF0078",
 	F = "\124cFFFF0000",
 	N = "\124cFFFF0000"
-	}
+}
 
-	local rankColorsTableConvert = {
+local rankColorsTableConvert = {
 	"S",
 	"A",
 	"B",
-	"C", 
+	"C",
 	"D",
 	"F",
 	"N"
-	}
+}
 
 local altColor = "\124cFFb8b8b8"
 
@@ -59,37 +59,50 @@ local statusEnableText = "TMB Tooltips is currently: Disabled"
 
 local currentPlayer = UnitName("player")
 
-
-
+local ttList = {
+	["GameTooltip"] = {
+		["OnTooltipSetItem"] = true,
+		["OnTooltipSetSpell"] = true,
+		["OnTooltipSetAchievement"] = true,
+	},
+	["ItemRefTooltip"] = {
+		["OnTooltipSetItem"] = true,
+	},
+	["AtlasLootTooltip"] = {
+		["OnTooltipSetItem"] = true,
+	},
+}
+local ttHooks = {}
+local ttLine = {}
 
 
 local TMBLDB = LibStub("LibDataBroker-1.1"):NewDataObject("TMBTooltips", {
-type = "data source",
-text = "TMB Tooltips",
-icon = "Interface\\Icons\\inv_misc_note_01",
-OnClick = function(self,button,down)
-	if button == "LeftButton" then
-		if ItemListsDB.enabled then 
-			statusEnableText = "TMB Tooltips is currently: Disabled"
-			ItemListsDB.enabled = false
-		else
-			statusEnableText = "TMB Tooltips is currently: Enabled"
-			ItemListsDB.enabled = true
+	type = "data source",
+	text = "TMB Tooltips",
+	icon = "Interface\\Icons\\inv_misc_note_01",
+	OnClick = function(self,button,down)
+		if button == "LeftButton" then
+			if ItemListsDB.enabled then
+				statusEnableText = "TMB Tooltips is currently: Disabled"
+				ItemListsDB.enabled = false
+			else
+				statusEnableText = "TMB Tooltips is currently: Enabled"
+				ItemListsDB.enabled = true
+			end
+			ThatsMyBis:Print(statusEnableText)
+		elseif button == "RightButton" then
+			popupConfig()
 		end
-	ThatsMyBis:Print(statusEnableText)
-	elseif button == "RightButton" then
-		popupConfig()
-	end
-end,
-OnTooltipShow = function(tooltip) -- Icon tooltip
-	tooltip:AddLine("That's My BIS Tooltips")
-	tooltip:AddLine("Revision    : 106-Wrath") -- EDIT TOC and PKMETA
-	tooltip:AddLine("Left click : Enable/Disable display")
-	tooltip:AddLine("Right click: Open config")
-	tooltip:AddLine("Hold Alt   : Change tooltip display")
-	tooltip:AddLine("Chat CMD   : /tmb")
-	tooltip:AddLine("Database ID: " .. ItemListsDB.itemNotes.ID)
-end,
+	end,
+	OnTooltipShow = function(tooltip) -- Icon tooltip
+		tooltip:AddLine("That's My BIS Tooltips")
+		tooltip:AddLine("Revision    : 106-Wrath") -- EDIT TOC and PKMETA
+		tooltip:AddLine("Left click : Enable/Disable display")
+		tooltip:AddLine("Right click: Open config")
+		tooltip:AddLine("Hold Alt   : Change tooltip display")
+		tooltip:AddLine("Chat CMD   : /tmb")
+		tooltip:AddLine("Database ID: " .. ItemListsDB.itemNotes.ID)
+	end,
 })
 
 function showSync()
@@ -112,14 +125,14 @@ function showSync()
 	targetField:SetLabel("Who do you want to send data to?")
 	targetField:DisableButton(true)
 	syncFrame:AddChild(targetField)
-	
+
 	local SyncButton = AceGUI:Create("Button")
 	SyncButton:SetText("Sync")
 	syncFrame:AddChild(SyncButton)
 	SyncButton:SetCallback("OnClick", function (obj, button, down)
 		-- Start sync operation
 		ThatsMyBis:SendComm(targetField:GetText(), "RTS", ItemListsDB.itemNotes.ID)
-		
+
 	end)
 
 
@@ -128,12 +141,12 @@ function showSync()
 
 
 
-	syncFrame:SetCallback("OnClose", 
-	function(widget)
-	  AceGUI:Release(widget)
-	  syncShown = false
-	end
-   )
+	syncFrame:SetCallback("OnClose",
+			function(widget)
+				AceGUI:Release(widget)
+				syncShown = false
+			end
+	)
 end
 
 local function newConfigPanel()
@@ -154,12 +167,12 @@ local function newConfigPanel()
 
 
 
-	syncFrame:SetCallback("OnClose", 
-	function(widget)
-	  AceGUI:Release(widget)
-	  configShown = false
-	end
-   )
+	syncFrame:SetCallback("OnClose",
+			function(widget)
+				AceGUI:Release(widget)
+				configShown = false
+			end
+	)
 end
 
 
@@ -168,7 +181,7 @@ function popupConfig()
 	if frameShown then
 		return
 	end
-	
+
 	frameShown = true
 
 
@@ -188,7 +201,7 @@ function popupConfig()
 	textboxGroup:SetRelativeWidth(0.6)
 
 	local checkLabel = AceGUI:Create("Label")
-    checkLabel:SetText("Tooltip display settings")
+	checkLabel:SetText("Tooltip display settings")
 	checkboxGroup:AddChild(checkLabel)
 
 	local check1 = AceGUI:Create("CheckBox")
@@ -196,10 +209,10 @@ function popupConfig()
 	check1:SetValue(ItemListsDB.displayPrioNote)
 	checkboxGroup:AddChild(check1)
 
---[[ 	local check6 = AceGUI:Create("CheckBox")
-	check6:SetLabel("Guild Note")
-	check6:SetValue(ItemListsDB.displayGuildNote)
-	checkboxGroup:AddChild(check6) ]]
+	--[[ 	local check6 = AceGUI:Create("CheckBox")
+        check6:SetLabel("Guild Note")
+        check6:SetValue(ItemListsDB.displayGuildNote)
+        checkboxGroup:AddChild(check6) ]]
 
 	local check2 = AceGUI:Create("CheckBox")
 	check2:SetLabel("Show Ranks")
@@ -265,26 +278,14 @@ function popupConfig()
 	inputfield:SetNumLines(12)
 	inputfield:SetWidth(320)
 
-	local textBuffer, i, lastPaste = {}, 0, 0
 	local pasted = ""
 	inputfield.editBox:SetScript("OnShow", function(obj)
 		obj:SetText("")
 		pasted = ""
 	end)
-	local function clearBuffer(obj1)
-		obj1:SetScript('OnUpdate', nil)
-		pasted = strtrim(table.concat(textBuffer))
-		inputfield.editBox:ClearFocus()
-	end
-	inputfield.editBox:SetScript('OnChar', function(obj2, c)
-		if lastPaste ~= GetTime() then
-			textBuffer, i, lastPaste = {}, 0, GetTime()
-			obj2:SetScript('OnUpdate', clearBuffer)
-		end
-		i = i + 1
-		textBuffer[i] = c
+	inputfield.editBox:SetScript('OnTextChanged', function(self)
+		pasted = self:GetText()
 	end)
-	inputfield.editBox:SetMaxBytes(2500)
 	inputfield.editBox:SetScript("OnMouseUp", nil);
 
 	inputfield:DisableButton(true)
@@ -315,9 +316,9 @@ function popupConfig()
 	check5:SetCallback("OnValueChanged", function(obj, evt, val)
 		ItemListsDB.displayAlts = check5:GetValue()
 	end)
---[[ 	check6:SetCallback("OnValueChanged", function(obj, evt, val)
-		ItemListsDB.displayGuildNote = check6:GetValue()
-	end) ]]
+	--[[ 	check6:SetCallback("OnValueChanged", function(obj, evt, val)
+            ItemListsDB.displayGuildNote = check6:GetValue()
+        end) ]]
 	check7:SetCallback("OnValueChanged", function(obj, evt, val)
 		ItemListsDB.hideReceivedWishes = check7:GetValue()
 	end)
@@ -345,33 +346,302 @@ function popupConfig()
 	end)
 
 	parseData:SetCallback("OnClick", function (obj, button, down)
-		--message(pasted)
 		if pasted == "" then return end
 		obj:SetText(ParseText(pasted))
 		inputfield:SetText("")
+		pasted = "" -- Limpiar la variable después de usarla
 	end)
 
 
 
-
-	popup:SetCallback("OnClose", 
-	function(widget)
-	  AceGUI:Release(widget)
-	  frameShown = false
-	end
-   )
+	popup:SetCallback("OnClose",
+			function(widget)
+				AceGUI:Release(widget)
+				frameShown = false
+			end
+	)
 end
 
 
 function ThatsMyBis:OnInitialize() --Fires when the addon is being set up.
 	self.db = LibStub("AceDB-3.0"):New("TMBDB", { profile = { minimap = { hide = false, }, }, })
-	TMBIcon:Register("TMBTooltips", TMBLDB,  self.db.profile.minimap) 
-	self:RegisterChatCommand("tmb", "ChatCommands") 
+	TMBIcon:Register("TMBTooltips", TMBLDB,  self.db.profile.minimap)
+	self:RegisterChatCommand("tmb", "ChatCommands")
 	self:RegisterComm("TMBSync", ThatsMyBis:OnCommReceived())
 
+	-- Support LinkWrangler
+	if LinkWrangler then
+		LinkWrangler.RegisterCallback("tmb", function(f)
+			ttList[f:GetName()] = {
+				["OnTooltipSetItem"] = true,
+				["OnTooltipSetSpell"] = true,
+				["OnTooltipSetAchievement"] = true,
+			}
+			self:HookTip(f, "OnTooltipSetItem")
+			self:HookTip(f, "OnTooltipSetSpell")
+			self:HookTip(f, "OnTooltipSetAchievement")
+		end, "allocate", "allocatecomp")
+	end
+
+	if ItemListsDB.enabled then
+		self:HookTooltips()
+	end
 end
 
+function ThatsMyBis:HookTooltips()
+	for tooltip, scripts in pairs(ttList) do
+		if _G[tooltip] then
+			for script, _ in pairs(scripts) do
+				self:HookTip(_G[tooltip], script)
+			end
+		end
+	end
+end
 
+function ThatsMyBis:HookTip(tooltip, script)
+	local ttName = tooltip:GetName()
+	ttLine[ttName] = ttLine[ttName] or {}
+	-- Corregir la forma de hacer el hook
+	self:HookScript(tooltip, script, function(tt, ...)
+		self:OnTooltipSetItem(tt, ...)
+	end)
+	ttHooks[ttName] = ttHooks[ttName] or {}
+	ttHooks[ttName][script] = true
+end
+
+function ThatsMyBis:OnTooltipSetItem(tooltip, ...)
+	if not ItemListsDB.enabled then return end
+	if ItemListsDB.onlyInRaid and GetNumRaidMembers() == 0 then return end
+
+	local ttName = tooltip:GetName()
+	self:FixRightTextAnchors(tooltip)
+
+	local name, link = tooltip:GetItem()
+	if not link then return end
+
+	local itemID = tonumber(link:match("item:(%d+):"))
+	if not itemID then return end
+
+	local itemNotes = ItemListsDB.itemNotes[itemID]
+	if not itemNotes then return end
+
+	-- El resto del código del tooltip se mantiene igual
+	if not IsAltKeyDown() then
+		-- Añadir notas de prioridad
+		if ItemListsDB.displayPrioNote or ItemListsDB.displayRank then
+			local rankData = ""
+			local rankColorSelect = itemNotes.rank
+			if (tonumber(rankColorSelect) ~= nil) then
+				rankColorSelect = rankColorsTableConvert[tonumber(rankColorSelect)]
+			end
+
+			local itemPrioNotes = itemNotes.prioNote or ""
+			if not ItemListsDB.displayPrioNote then itemPrioNotes = "" end
+			if itemPrioNotes ~= "" then itemPrioNotes = itemPrioNotes .. " | " end
+
+			if ItemListsDB.displayRank and (itemNotes.rank ~= "" and itemNotes.rank ~= nil) then
+				rankData = "\124cFFD97025Rank: " .. rankColorsTable[rankColorSelect]..itemNotes.rank
+			end
+			if rankData ~= "" or itemPrioNotes ~= "" then
+				tooltip:AddLine("|cffff0000Prio Notes:|r")
+				tooltip:AddLine("\124cFFFFFFFF" .. itemPrioNotes .. rankData)
+			end
+		end
+
+		-- Añadir wishlist (manteniendo tu lógica existente)
+		if ItemListsDB.displayWishes and itemNotes.wishlist then
+			local itemWishes = {}
+			local wishlistString = ""
+			local smallestKey = 0
+			local smallestWish = {}
+			local keyIndex = 1
+			local totalHiddenWishes = 0
+			local totalReceivedWishes = 0
+
+			if itemNotes.wishlist ~= nil then
+				for k,v in pairs(itemNotes.wishlist) do
+					add = false
+					if ItemListsDB.onlyRaidMembers then
+						if UnitInRaid(v.character_name) ~= nil then
+							add = true
+						end
+					else
+						add = true
+					end
+
+					if itemNotes.received ~= null and ItemListsDB.hideReceivedWishes then
+						for key,value in pairs(itemNotes.received) do
+							if value.character_name == v.character_name then
+								add = false
+								totalReceivedWishes = totalReceivedWishes + 1
+							end
+						end
+					end
+					if add == true then
+						itemWishes[keyIndex] = v
+						keyIndex = keyIndex + 1
+					else
+						totalHiddenWishes = totalHiddenWishes + 1
+					end
+
+
+				end
+				-- Construct the string to be displayed
+				for i = 1,ItemListsDB.maxNames,1 do
+					local smallestOrder = 99999
+					for k,v in pairs(itemWishes) do
+
+						if v.sort_order <= smallestOrder then
+							smallestKey = k
+							smallestOrder = v.sort_order
+						end
+					end
+					smallestWish = table.remove(itemWishes,smallestKey)
+					if smallestWish == nil then break end
+					local altStatus = ""
+					local linebreaker = " "
+					local noteHolder = ""
+					local OSText = ""
+					if ItemListsDB.showMemberNotes then
+						if smallestWish.character_note ~= nil then
+							noteHolder = " {"..smallestWish.character_note.."} "
+						end
+					end
+					if i % 5 == 0 then linebreaker = "\n" end
+					if ItemListsDB.displayAlts and smallestWish.character_is_alt == 1 then altStatus = altColor end
+					if ItemListsDB.displayOS and smallestWish.is_offspec == 1 then OSText = "-OS" end
+					wishlistString = wishlistString .. classColorsTable[ smallestWish.character_class ] .. smallestWish.character_name .. altStatus .. "[" .. smallestWish.sort_order .. OSText .. "]\124r" .. noteHolder .. linebreaker
+				end
+				local optionalString = ""
+				if totalHiddenWishes-totalReceivedWishes > 0 then
+					optionalString = optionalString .. totalHiddenWishes-totalReceivedWishes .. " Hidden "
+				end
+				if totalReceivedWishes > 0 then
+					optionalString = optionalString .. totalReceivedWishes .. " Received "
+				end
+				if optionalString ~= "" then
+					tooltip:AddLine("\124cFFFF8000" .. "Wishes: ( ".. optionalString .. ")" )
+				else
+					tooltip:AddLine("\124cFFFF8000" .. "Wishes:")
+				end
+				tooltip:AddLine( wishlistString )
+			end
+		end
+		-- %%%%%%%%%%%%%%%%% PRIOS
+
+		if ItemListsDB.displayPrios then
+			local itemPrios = {}
+			local prioListString = ""
+			local smallestPrioKey = 0
+			local smallestPrio = {}
+			local totalHiddenPrios = 0
+			local totalReceivedPrios = 0
+			keyIndex = 1
+			if itemNotes.priolist ~= nil then
+				for k,v in pairs(itemNotes.priolist) do
+					add = false
+					if ItemListsDB.onlyRaidMembers then
+						if UnitInRaid(v.character_name) ~= nil then
+							add = true
+						end
+					else
+						add = true
+					end
+
+					if itemNotes.received ~= null and ItemListsDB.hideReceivedPrios then
+						for key,value in pairs(itemNotes.received) do
+							if value.character_name == v.character_name then
+								add = false
+								totalReceivedPrios = totalReceivedPrios + 1
+							end
+						end
+					end
+					if add == true then
+						itemPrios[keyIndex] = v
+						keyIndex = keyIndex + 1
+					else
+						totalHiddenPrios = totalHiddenPrios + 1
+					end
+
+
+				end
+				-- Construct the string to be displayed
+				for i = 1,ItemListsDB.maxNames,1 do
+					local smallestPrioOrder = 99999
+					for k,v in pairs(itemPrios) do
+						if v.sort_order <= smallestPrioOrder then
+							smallestPrioKey = k
+							smallestPrioOrder = v.sort_order
+						end
+					end
+					smallestPrio = table.remove(itemPrios,smallestPrioKey)
+					if smallestPrio == nil then break end
+					local altStatus = ""
+					local linebreaker = " "
+					local noteHolder = ""
+					local OSText = ""
+					if ItemListsDB.showMemberNotes then
+						if smallestPrio.character_note ~= nil then
+							noteHolder = " {"..smallestPrio.character_note.."} "
+						end
+					end
+					if i % 5 == 0 then linebreaker = "\n" end
+					if ItemListsDB.displayAlts and smallestPrio.character_is_alt == 1 then altStatus = altColor end
+					if ItemListsDB.displayOS and smallestPrio.is_offspec == 1 then OSText = "-OS" end
+					prioListString = prioListString .. classColorsTable[ smallestPrio.character_class ]  .. smallestPrio.character_name .. altStatus .. "[" .. smallestPrio.sort_order .. OSText .. "]\124r" .. noteHolder .. linebreaker
+				end
+
+				optionalString = ""
+				if totalHiddenPrios-totalReceivedPrios > 0 then
+					optionalString = optionalString .. totalHiddenPrios-totalReceivedPrios .. " Hidden "
+				end
+				if totalReceivedPrios > 0 then
+					optionalString = optionalString .. totalReceivedPrios .. " Received "
+				end
+				if optionalString ~= "" then
+					tooltip:AddLine("\124cFFFF8000" .. "Prios: ( ".. optionalString .. ")" )
+				else
+					tooltip:AddLine("\124cFFFF8000" .. "Prios:")
+				end
+				tooltip:AddLine( prioListString )
+			end
+		end
+
+		if ItemListsDB.forceReceivedList == true then
+			recievedLogic(itemNotes,tooltip)
+		end
+
+	else
+		recievedLogic(itemNotes,tooltip)
+	end
+
+	-- Ajustar el anclaje del texto
+	local maxLeft = 0
+	local lastLine = tooltip:NumLines()
+
+	for i = 1, lastLine do
+		maxLeft = max(_G[ttName.."TextLeft"..i]:GetWidth(), maxLeft)
+	end
+
+	for i = 1, lastLine do
+		ttLine[ttName][i] = true
+		if _G[ttName.."TextRight"..i]:GetText() then
+			_G[ttName.."TextRight"..i]:SetPoint("LEFT", _G[ttName.."TextLeft"..i], "LEFT", maxLeft+10, 0)
+		end
+	end
+end
+
+function ThatsMyBis:FixRightTextAnchors(tooltip)
+	local ttName = tooltip:GetName()
+	if ttLine[ttName] then
+		for n, _ in pairs(ttLine[ttName]) do
+			if _G[ttName.."TextRight"..n] then
+				_G[ttName.."TextRight"..n]:ClearAllPoints()
+			end
+			ttLine[ttName][n] = nil
+		end
+	end
+end
 
 function ThatsMyBis:OnEnable() --Fires when the addon loads, makes sure there is a db to look at.
 
@@ -396,11 +666,11 @@ function ThatsMyBis:OnEnable() --Fires when the addon loads, makes sure there is
 	if ItemListsDB.lootTableTest == nil then ItemListsDB.lootTableTest = {} end
 
 
-	if ItemListsDB.enabled then 
+	if ItemListsDB.enabled then
 		statusEnableText = "TMB Tooltips is currently: Enabled"
 	end
 	self:RegisterEvent("CHAT_MSG_LOOT", "HandleEvent")
-	
+
 end
 
 local function exportLootTable()
@@ -426,7 +696,7 @@ function ThatsMyBis:HandleEvent(self, event, ...)
 	local itemLink = string.match(event,"|%x+|Hitem:.-|h.-|h|r")
 	local itemId, itemName, quality = ParseItemIdOrLink(itemLink)
 	local LootersName = string.match(event,"%u%l+")
-	
+
 
 	if (LootersName == "You") then
 		LootersName = UnitName("player");
@@ -439,17 +709,17 @@ function ThatsMyBis:HandleEvent(self, event, ...)
 end
 
 function ThatsMyBis:ChatCommands(arg)
-	if arg == "" then 
+	if arg == "" then
 		popupConfig()
 	elseif arg == "minimap" then
-		self.db.profile.minimap.hide = not self.db.profile.minimap.hide 
+		self.db.profile.minimap.hide = not self.db.profile.minimap.hide
 		if self.db.profile.minimap.hide then
-			TMBIcon:Hide("TMBTooltips") 
-		else 
-			TMBIcon:Show("TMBTooltips") 
-		end 
+			TMBIcon:Hide("TMBTooltips")
+		else
+			TMBIcon:Show("TMBTooltips")
+		end
 	elseif arg == "toggle" then
-		if ItemListsDB.enabled then 
+		if ItemListsDB.enabled then
 			statusEnableText = "TMB Tooltips is currently: Disabled"
 			ItemListsDB.enabled = false
 		else
@@ -463,22 +733,22 @@ function ThatsMyBis:ChatCommands(arg)
 		exportLootTable()
 	elseif arg == "notes" then
 		ItemListsDB.showMemberNotes = not ItemListsDB.showMemberNotes
-	else 
+	else
 		ThatsMyBis:Print("Thats my BIS command arguments\nminimap - toggle minimap icon\ntoggle - enable/disable function\nno argument - open config\nanything else - show this text")
 	end
 
-end 
+end
 
 local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 	if not ItemListsDB.enabled then return end
 	if ItemListsDB.onlyInRaid then
 		if not IsInRaid() then return end
 	end
-	local itemName, itemLink = tt:GetItem() 
+	local itemName, itemLink = tt:GetItem()
 	if not itemName then return end
-	local itemID = select( 1, GetItemInfoInstant( itemName ) )
-	
-	if itemID == nil then 
+	local itemID = tonumber(itemLink:match("item:(%d+):"))
+
+	if itemID == nil then
 		itemID = tonumber( string.match( itemLink, "item:?(%d+):" ) )
 		if itemID == nil then
 			return
@@ -489,7 +759,7 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 		itemID = 18422
 	elseif itemID == 19003 then
 		itemID = 19002
-	elseif itemID == 32386 then 
+	elseif itemID == 32386 then
 		itemID = 32385
 	end
 
@@ -538,7 +808,7 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 			local keyIndex = 1
 			local totalHiddenWishes = 0
 			local totalReceivedWishes = 0
-			
+
 			if itemNotes.wishlist ~= nil then
 				for k,v in pairs(itemNotes.wishlist) do
 					add = false
@@ -550,21 +820,21 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 						add = true
 					end
 
-					if itemNotes.received ~= null and ItemListsDB.hideReceivedWishes then 
+					if itemNotes.received ~= null and ItemListsDB.hideReceivedWishes then
 						for key,value in pairs(itemNotes.received) do
 							if value.character_name == v.character_name then
 								add = false
 								totalReceivedWishes = totalReceivedWishes + 1
 							end
 						end
-					end 
+					end
 					if add == true then
-						itemWishes[keyIndex] = v 
+						itemWishes[keyIndex] = v
 						keyIndex = keyIndex + 1
 					else
 						totalHiddenWishes = totalHiddenWishes + 1
 					end
-					
+
 
 				end
 				-- Construct the string to be displayed
@@ -583,8 +853,8 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 					local linebreaker = " "
 					local noteHolder = ""
 					local OSText = ""
-					if ItemListsDB.showMemberNotes then 
-						if smallestWish.character_note ~= nil then 
+					if ItemListsDB.showMemberNotes then
+						if smallestWish.character_note ~= nil then
 							noteHolder = " {"..smallestWish.character_note.."} "
 						end
 					end
@@ -594,17 +864,17 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 					wishlistString = wishlistString .. classColorsTable[ smallestWish.character_class ] .. smallestWish.character_name .. altStatus .. "[" .. smallestWish.sort_order .. OSText .. "]\124r" .. noteHolder .. linebreaker
 				end
 				local optionalString = ""
-				if totalHiddenWishes-totalReceivedWishes > 0 then 
+				if totalHiddenWishes-totalReceivedWishes > 0 then
 					optionalString = optionalString .. totalHiddenWishes-totalReceivedWishes .. " Hidden "
 				end
 				if totalReceivedWishes > 0 then
 					optionalString = optionalString .. totalReceivedWishes .. " Received "
 				end
-				if optionalString ~= "" then 
-					tt:AddLine("\124cFFFF8000" .. "Wishes: ( ".. optionalString .. ")" )	
+				if optionalString ~= "" then
+					tt:AddLine("\124cFFFF8000" .. "Wishes: ( ".. optionalString .. ")" )
 				else
 					tt:AddLine("\124cFFFF8000" .. "Wishes:")
-				end	
+				end
 				tt:AddLine( wishlistString )
 			end
 		end
@@ -629,21 +899,21 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 						add = true
 					end
 
-					if itemNotes.received ~= null and ItemListsDB.hideReceivedPrios then 
+					if itemNotes.received ~= null and ItemListsDB.hideReceivedPrios then
 						for key,value in pairs(itemNotes.received) do
 							if value.character_name == v.character_name then
 								add = false
 								totalReceivedPrios = totalReceivedPrios + 1
 							end
 						end
-					end 
+					end
 					if add == true then
-						itemPrios[keyIndex] = v 
+						itemPrios[keyIndex] = v
 						keyIndex = keyIndex + 1
 					else
 						totalHiddenPrios = totalHiddenPrios + 1
 					end
-					
+
 
 				end
 				-- Construct the string to be displayed
@@ -661,8 +931,8 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 					local linebreaker = " "
 					local noteHolder = ""
 					local OSText = ""
-					if ItemListsDB.showMemberNotes then 
-						if smallestPrio.character_note ~= nil then 
+					if ItemListsDB.showMemberNotes then
+						if smallestPrio.character_note ~= nil then
 							noteHolder = " {"..smallestPrio.character_note.."} "
 						end
 					end
@@ -671,19 +941,19 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 					if ItemListsDB.displayOS and smallestPrio.is_offspec == 1 then OSText = "-OS" end
 					prioListString = prioListString .. classColorsTable[ smallestPrio.character_class ]  .. smallestPrio.character_name .. altStatus .. "[" .. smallestPrio.sort_order .. OSText .. "]\124r" .. noteHolder .. linebreaker
 				end
-	
+
 				optionalString = ""
-				if totalHiddenPrios-totalReceivedPrios > 0 then 
+				if totalHiddenPrios-totalReceivedPrios > 0 then
 					optionalString = optionalString .. totalHiddenPrios-totalReceivedPrios .. " Hidden "
 				end
 				if totalReceivedPrios > 0 then
 					optionalString = optionalString .. totalReceivedPrios .. " Received "
 				end
-				if optionalString ~= "" then 
-					tt:AddLine("\124cFFFF8000" .. "Prios: ( ".. optionalString .. ")" )	
+				if optionalString ~= "" then
+					tt:AddLine("\124cFFFF8000" .. "Prios: ( ".. optionalString .. ")" )
 				else
 					tt:AddLine("\124cFFFF8000" .. "Prios:")
-				end	
+				end
 				tt:AddLine( prioListString )
 			end
 		end
@@ -692,7 +962,7 @@ local function ModifyItemTooltip( tt ) -- Function for modifying the tooltip
 			recievedLogic(itemNotes,tt)
 		end
 
-	else 
+	else
 		recievedLogic(itemNotes,tt)
 	end
 end
@@ -717,49 +987,29 @@ function recievedLogic(inputData,tt)
 	end
 end
 
-
--- //TODO: Affects more than the static item frame. Need to look into this later
---[[ ChatFrame_OnHyperlinkShow = function(...) -- Hook into the static item info window, not the tooltip.
-    local chatFrame, link, text, button = ...
-    local result = origChatFrame_OnHyperlinkShow(...)
-    
-        ShowUIPanel(ItemRefTooltip)
-        if (not ItemRefTooltip:IsVisible()) then
-            ItemRefTooltip:SetOwner(UIParent, "ANCHOR_PRESERVE")
-        end
-        
-       	ModifyItemTooltip(ItemRefTooltip)
-
-        ItemRefTooltip:Show(); ItemRefTooltip:Show()
-
-    --return result
-end ]]
-
-
-
 local function InitFrame() --Starts the listener for tooltips
 	GameTooltip:HookScript( "OnTooltipSetItem", ModifyItemTooltip )
-	
+
 end
 
 function ParseText(input)
 	if input == nil then return "NoData" end
 	local headers = {
-	--All export
+		--All export
 		"type,raid_group_name,member_name,character_name,character_class,character_is_alt,character_inactive_at,character_note,sort_order,item_name,item_id,is_offspec,note,received_at,import_id,item_note,item_prio_note,item_tier,item_tier_label,created_at,updated_at,",
-	-- Tailored tmb export
-		"type,character_name,character_class,character_is_alt,character_inactive_at,character_note,sort_order,item_id,is_offspec,received_at,item_prio_note,item_tier_label," 
+		-- Tailored tmb export
+		"type,character_name,character_class,character_is_alt,character_inactive_at,character_note,sort_order,item_id,is_offspec,received_at,item_prio_note,item_tier_label,"
 	}
 
 
 	local parsedLines = {}
 	local parsedEntries = {}
-	
+
 	for line in input:gmatch("([^\n]*)\n?") do -- Extract the lines into seperate entries in an array.
 		table.insert(parsedLines, line..",")
 	end
 	if (not(parsedLines[1] == headers[1] or parsedLines[1] == headers[2])) then return "Wrong CSV header" end -- Validate the header
-	
+
 	local headerData = {}
 	for lineKey,line in pairs(parsedLines) do
 		entry = {}
@@ -776,7 +1026,7 @@ function ParseText(input)
 	end
 	table.remove(parsedEntries) -- Pop of the malformed last entry.
 	local noteTable = {}
-	
+
 
 	for k,e in pairs(parsedEntries) do
 		local tempTable = {}
@@ -785,12 +1035,12 @@ function ParseText(input)
 		local currentItemID = nil
 		if e.character_inactive_at == "" then
 			currentItemID = tonumber(e.item_id)
-			checkToken = tokens[currentItemID]  
+			checkToken = tokens[currentItemID]
 			if checkToken ~= nil then currentItemID = checkToken end
 			tempTable = noteTable[ currentItemID ] --Try and load the item element
 			if tempTable == nil then noteTable[ currentItemID ] = {} end -- Make an array because this is the first time the item is seen
 
-			if e.received_at ~= "" then 
+			if e.received_at ~= "" then
 				e.type = "received"
 			end
 
@@ -830,7 +1080,7 @@ function ParseText(input)
 					table.insert(tempTable,tempCharTable)
 				end
 				noteTable[currentItemID].priolist = tempTable
-			elseif e.type == "received" then 
+			elseif e.type == "received" then
 				local skip = false
 				if noteTable[currentItemID].received ~= nil then
 					-- Search the array to check for duplicates
@@ -841,7 +1091,7 @@ function ParseText(input)
 						end
 					end
 				end
-				if not skip then 
+				if not skip then
 					tempCharTable.character_class = classToID[e.character_class]
 					tempCharTable.character_name = e.character_name
 					tempCharTable.character_is_alt = tonumber(e.character_is_alt)
@@ -856,14 +1106,14 @@ function ParseText(input)
 					end
 					noteTable[currentItemID].received = tempTable
 				end
-			elseif e.type == "item_note" then 
+			elseif e.type == "item_note" then
 				noteTable[currentItemID].prioNote = e.item_prio_note
 				noteTable[currentItemID].guildNote = e.item_note
 				noteTable[currentItemID].rank = e.item_tier_label
 			end
 
 		end
-		 -- 
+		--
 	end
 	local checksum = ""
 	local serializedTable = LibAceSerializer:Serialize(noteTable)
@@ -873,15 +1123,15 @@ function ParseText(input)
 	ThatsMyBis:Print("Added data: "..checksum)
 	noteTable["ID"] = checksum
 	ItemListsDB["itemNotes"] = noteTable -- Add it to peristent storage
-	
-	return "Success, data saved"
-	end
 
-function ParseCSVLine (line,sep) 
+	return "Success, data saved"
+end
+
+function ParseCSVLine (line,sep)
 	local res = {}
 	local pos = 1
 	sep = sep or ','
-	while true do 
+	while true do
 		local c = string.sub(line,pos,pos)
 		if (c == "") then break end
 		if (c == '"') then
@@ -891,8 +1141,8 @@ function ParseCSVLine (line,sep)
 				local startp,endp = string.find(line,'^%b""',pos)
 				txt = txt..string.sub(line,startp+1,endp-1)
 				pos = endp + 1
-				c = string.sub(line,pos,pos) 
-				if (c == '"') then txt = txt..'"' end 
+				c = string.sub(line,pos,pos)
+				if (c == '"') then txt = txt..'"' end
 				-- check first char AFTER quoted string, if it is another
 				-- quoted string without separator, then temp it
 				-- this is the way to "escape" the quote char in a quote. example:
@@ -901,17 +1151,17 @@ function ParseCSVLine (line,sep)
 			table.insert(res,txt)
 			assert(c == sep or c == "")
 			pos = pos + 1
-		else	
+		else
 			-- no quotes used, just look for the first separator
 			local startp,endp = string.find(line,sep,pos)
-			if (startp) then 
+			if (startp) then
 				table.insert(res,string.sub(line,pos,startp-1))
 				pos = endp + 1
 			else
 				-- no separator found -> use rest of string and terminate
 				table.insert(res,string.sub(line,pos))
 				break
-			end 
+			end
 		end
 	end
 	return res
@@ -919,8 +1169,8 @@ end
 
 function ThatsMyBis:OnCommReceived(prefix, serializedMsg, distri, sender)
 	if prefix == "TMBSync" then
-		if sender ~= currentPlayer then 
-			if syncShown then 
+		if sender ~= currentPlayer then
+			if syncShown then
 				local decompress = libc:Decompress(serializedMsg)
 				local valid, command, data = LibAceSerializer:Deserialize(decompress)
 				if valid then
@@ -932,7 +1182,7 @@ function ThatsMyBis:OnCommReceived(prefix, serializedMsg, distri, sender)
 						if ItemListsDB.itemNotes.ID == data then
 							ThatsMyBis:SendComm(sender,"INFO", currentPlayer .. " already have this data")
 						else
-							ThatsMyBis:SendComm(sender,"RTR","Please donate if you like this addon") 
+							ThatsMyBis:SendComm(sender,"RTR","Please donate if you like this addon")
 						end
 					elseif command == "RTR" then
 						--Sender is ready to recieve, Transmit data.
@@ -947,7 +1197,7 @@ function ThatsMyBis:OnCommReceived(prefix, serializedMsg, distri, sender)
 						ThatsMyBis:SendComm(sender, "INFO", currentPlayer .. " is now on ID " .. ItemListsDB.itemNotes.ID )
 					elseif command == "DBID" then
 						ItemListsDB.itemNotes.ID = data
-						
+
 					end
 				else
 					ThatsMyBis:Print("Received invalid data, make sure you're all running the latest version.")
@@ -961,24 +1211,24 @@ function ThatsMyBis:OnCommReceived(prefix, serializedMsg, distri, sender)
 end
 
 function ThatsMyBis:SendComm(target, command, data )
-    local serialized = nil
-    if data then
-        serialized = LibAceSerializer:Serialize(command, data)
+	local serialized = nil
+	if data then
+		serialized = LibAceSerializer:Serialize(command, data)
 		compressed = libc:Compress(serialized)
 	end
-	if target == "PARTY" then 
+	if target == "PARTY" then
 		ThatsMyBis:SendCommMessage("TMBSync", compressed, target, "BULK",ThatsMyBis.commCallback)
-	elseif target == "RAID" then 
+	elseif target == "RAID" then
 		ThatsMyBis:SendCommMessage("TMBSync", compressed, target, "BULK",ThatsMyBis.commCallback)
-	elseif target == "GUILD" then 
+	elseif target == "GUILD" then
 		ThatsMyBis:SendCommMessage("TMBSync", compressed, target, "BULK",ThatsMyBis.commCallback)
-	else 
+	else
 		ThatsMyBis:SendCommMessage("TMBSync", compressed, "WHISPER", target, "BULK",ThatsMyBis.commCallback)
 	end
-    
+
 end
 
-function ThatsMyBis:commCallback(num,total) 
+function ThatsMyBis:commCallback(num,total)
 	--syncFrame:SetStatusText("Sending: ".. math.floor(tonumber(num)/1000) .. " of ".. math.floor(tonumber(total)/1000) .. " total")
 	syncFrame:SetStatusText("Sending: ".. math.floor(tonumber(num)/tonumber(total)*100).."%")
 	--ThatsMyBis:Print(num,total)
@@ -989,7 +1239,7 @@ function ParseItemIdOrLink(item_link_or_id)
 	if itemLink then
 		--local itemName = string.sub(string.match(itemLink,"%[.+%]"), 2, -2)
 		local itemString = string.match(itemLink, "item[%-?%d:]+");
-		local itemId=string.match(itemString,"%d+");		
+		local itemId=string.match(itemString,"%d+");
 		return itemId,itemName,quality
 	else
 		return nil
