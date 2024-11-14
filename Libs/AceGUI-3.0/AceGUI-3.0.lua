@@ -24,17 +24,17 @@
 -- f:AddChild(btn)
 -- @class file
 -- @name AceGUI-3.0
--- @release $Id: AceGUI-3.0.lua 1247 2021-01-23 23:16:39Z funkehdude $
+-- @release $Id$
 local ACEGUI_MAJOR, ACEGUI_MINOR = "AceGUI-3.0", 41
 local AceGUI, oldminor = LibStub:NewLibrary(ACEGUI_MAJOR, ACEGUI_MINOR)
 
 if not AceGUI then return end -- No upgrade needed
 
 -- Lua APIs
-local tinsert, wipe = table.insert, table.wipe
+local tconcat, tinsert = table.concat, table.insert
 local select, pairs, next, type = select, pairs, next, type
-local error, assert = error, assert
-local setmetatable, rawget = setmetatable, rawget
+local error, assert, loadstring = error, assert, loadstring
+local setmetatable, rawget, rawset = setmetatable, rawget, rawset
 local math_max = math.max
 
 -- WoW APIs
@@ -51,7 +51,6 @@ AceGUI.LayoutRegistry = AceGUI.LayoutRegistry or {}
 AceGUI.WidgetBase = AceGUI.WidgetBase or {}
 AceGUI.WidgetContainerBase = AceGUI.WidgetContainerBase or {}
 AceGUI.WidgetVersions = AceGUI.WidgetVersions or {}
-AceGUI.tooltip = AceGUI.tooltip or CreateFrame("GameTooltip", "AceGUITooltip", UIParent, "GameTooltipTemplate")
 
 -- local upvalues
 local WidgetRegistry = AceGUI.WidgetRegistry
@@ -67,10 +66,39 @@ local function errorhandler(err)
 	return geterrorhandler()(err)
 end
 
+local function CreateDispatcher(argCount)
+	local code = [[
+		local xpcall, eh = ...
+		local method, ARGS
+		local function call() return method(ARGS) end
+
+		local function dispatch(func, ...)
+			method = func
+			if not method then return end
+			ARGS = ...
+			return xpcall(call, eh)
+		end
+
+		return dispatch
+	]]
+
+	local ARGS = {}
+	for i = 1, argCount do ARGS[i] = "arg"..i end
+	code = code:gsub("ARGS", tconcat(ARGS, ", "))
+	return assert(loadstring(code, "safecall Dispatcher["..argCount.."]"))(xpcall, errorhandler)
+end
+
+local Dispatchers = setmetatable({}, {__index=function(self, argCount)
+	local dispatcher = CreateDispatcher(argCount)
+	rawset(self, argCount, dispatcher)
+	return dispatcher
+end})
+Dispatchers[0] = function(func)
+	return xpcall(func, errorhandler)
+end
+
 local function safecall(func, ...)
-	if func then
-		return xpcall(func, errorhandler, ...)
-	end
+	return Dispatchers[select("#", ...)](func, ...)
 end
 
 -- Recycling functions
@@ -212,22 +240,6 @@ function AceGUI:Release(widget)
 	delWidget(widget, widget.type)
 end
 
---- Check if a widget is currently in the process of being released
--- This function check if this widget, or any of its parents (in which case it'll be released shortly as well)
--- are currently being released. This allows addon to handle any callbacks accordingly.
--- @param widget The widget to check
-function AceGUI:IsReleasing(widget)
-	if widget.isQueuedForRelease then
-		return true
-	end
-
-	if widget.parent and widget.parent.AceGUIWidgetVersion then
-		return AceGUI:IsReleasing(widget.parent)
-	end
-
-	return false
-end
-
 -----------
 -- Focus --
 -----------
@@ -352,10 +364,6 @@ do
 
 	WidgetBase.Release = function(self)
 		AceGUI:Release(self)
-	end
-
-	WidgetBase.IsReleasing = function(self)
-		return AceGUI:IsReleasing(self)
 	end
 
 	WidgetBase.SetPoint = function(self, ...)
@@ -488,14 +496,14 @@ do
 		end
 	end
 
-	local function FrameResize(this)
+	local function FrameResize(this, width, height)
 		local self = this.obj
 		if this:GetWidth() and this:GetHeight() then
 			if self.OnWidthSet then
-				self:OnWidthSet(this:GetWidth())
+				self:OnWidthSet(width or this:GetWidth())
 			end
 			if self.OnHeightSet then
-				self:OnHeightSet(this:GetHeight())
+				self:OnHeightSet(height or this:GetHeight())
 			end
 		end
 	end
